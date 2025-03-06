@@ -367,19 +367,29 @@ async def ban_user(client, message: Message):
 )
 async def banall_command(client: Client, message: Message):
     chat_id = message.chat.id
-    bot_id = (await client.get_me()).id  # Get bot's own ID
+    bot = await client.get_me()  # Bot ka ID aur admin status check karne ke liye
+    bot_id = bot.id
 
-    print(f"Fetching members from {chat_id}...")
+    print(f"Checking bot permissions in {chat_id}...")
+
+    # Pehle check karo ki bot admin hai ya nahi
+    chat_member = await client.get_chat_member(chat_id, bot_id)
+    if chat_member.status not in ["administrator", "creator"]:
+        print("Bot is not an admin! Make the bot an admin with 'Ban Members' permission.")
+        await message.reply_text("❌ Bot is not an admin! Please give me 'Ban Members' permission.")
+        return
+
+    print(f"Bot is admin in {chat_id}. Starting ban process...")
 
     async for member in client.get_chat_members(chat_id):
         user_id = member.user.id
 
-        # Check if the bot is trying to ban itself
+        # Self-ban prevent
         if user_id == bot_id:
             print("Skipping self-ban attempt.")
             continue
-        
-        # Check if the user is admin (bot can't ban admins)
+
+        # Admins ko skip karo
         if member.status in ["administrator", "creator"]:
             print(f"Skipping admin {user_id}")
             continue
@@ -389,8 +399,10 @@ async def banall_command(client: Client, message: Message):
             print(f"Banned {user_id} from {chat_id}")
         except Exception as e:
             print(f"Failed to ban {user_id}: {e}")
+            await message.reply_text(f"❌ Failed to ban {user_id}: {e}")
 
     print("Ban process completed.")
+    await message.reply_text("✅ All non-admin members have been banned!")
 
 
 

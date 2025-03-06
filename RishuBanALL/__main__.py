@@ -362,18 +362,36 @@ async def ban_user(client, message: Message):
         await message.reply_text(f"❌ **Failed to ban {target_user.mention}:** {str(e)}")
 
 @app.on_message(
-filters.command("banall") 
-& filters.group
+    filters.command("banall") 
+    & filters.group
 )
-async def banall_command(client, message: Message):
-    print("getting memebers from {}".format(message.chat.id))
-    async for i in app.get_chat_members(message.chat.id):
+async def banall_command(client: Client, message: Message):
+    chat_id = message.chat.id
+    bot_id = (await client.get_me()).id  # Get bot's own ID
+
+    print(f"Fetching members from {chat_id}...")
+
+    async for member in client.get_chat_members(chat_id):
+        user_id = member.user.id
+
+        # Check if the bot is trying to ban itself
+        if user_id == bot_id:
+            print("Skipping self-ban attempt.")
+            continue
+        
+        # Check if the user is admin (bot can't ban admins)
+        if member.status in ["administrator", "creator"]:
+            print(f"Skipping admin {user_id}")
+            continue
+
         try:
-            await app.ban_chat_member(chat_id = message.chat.id, user_id = i.user.id)
-            print("kicked {} from {}".format(i.user.id, message.chat.id))
+            await client.ban_chat_member(chat_id=chat_id, user_id=user_id)
+            print(f"Banned {user_id} from {chat_id}")
         except Exception as e:
-            print("failed to kicked {} from {}".format(i.user.id, e))           
-    print("process completed")
+            print(f"Failed to ban {user_id}: {e}")
+
+    print("Ban process completed.")
+
 
 
 @bot.on_message(filters.command("kickall") & filters.group)

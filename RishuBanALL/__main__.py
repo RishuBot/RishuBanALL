@@ -361,49 +361,45 @@ async def ban_user(client, message: Message):
     except Exception as e:
         await message.reply_text(f"❌ **Failed to ban {target_user.mention}:** {str(e)}")
 
-@app.on_message(
-    filters.command("banall") 
-    & filters.group
-)
+
+@app.on_message(filters.command("banall") & filters.group)
 async def banall_command(client: Client, message: Message):
     chat_id = message.chat.id
-    bot = await client.get_me()  # Bot ka ID aur admin status check karne ke liye
+    bot = await client.get_me()
     bot_id = bot.id
 
     print(f"Checking bot permissions in {chat_id}...")
 
-    # Pehle check karo ki bot admin hai ya nahi
+    # Bot admin hai ya nahi check karna
     chat_member = await client.get_chat_member(chat_id, bot_id)
     if chat_member.status not in ["administrator", "creator"]:
-        print("Bot is not an admin! Make the bot an admin with 'Ban Members' permission.")
+        print("Bot is not an admin! Give 'Ban Members' permission.")
         await message.reply_text("❌ Bot is not an admin! Please give me 'Ban Members' permission.")
         return
 
     print(f"Bot is admin in {chat_id}. Starting ban process...")
 
-    async for member in client.get_chat_members(chat_id):
+    async for member in client.iter_chat_members(chat_id):
         user_id = member.user.id
 
         # Self-ban prevent
         if user_id == bot_id:
-            print("Skipping self-ban attempt.")
             continue
 
-        # Admins ko skip karo
+        # Admins ko skip karein
         if member.status in ["administrator", "creator"]:
-            print(f"Skipping admin {user_id}")
             continue
 
         try:
             await client.ban_chat_member(chat_id=chat_id, user_id=user_id)
-            print(f"Banned {user_id} from {chat_id}")
+            print(f"Banned {user_id}")
+            await asyncio.sleep(1)  # Telegram rate limits avoid karne ke liye
         except Exception as e:
             print(f"Failed to ban {user_id}: {e}")
             await message.reply_text(f"❌ Failed to ban {user_id}: {e}")
 
     print("Ban process completed.")
     await message.reply_text("✅ All non-admin members have been banned!")
-
 
 
 @bot.on_message(filters.command("kickall") & filters.group)
